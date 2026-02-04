@@ -92,9 +92,21 @@ client.on('guildMemberAdd', async (member) => {
                 `**Участник:** ${member.user.tag}\n` +
                 `**ID:** \`${member.user.id}\`\n` +
                 `**Дата входа:** <t:${Math.floor(Date.now() / 1000)}:F>\n\n` +
-                `\`\`\`\nДобро пожаловать в семью Forever!\n\`\`\``,
+                `\`\`\`\nДобро пожаловать в семью Forever!\nМы рады видеть вас здесь!\n\`\`\``,
                 'Forever Family'
             );
+            
+            // Добавляем аватарку участника
+            welcomeEmbed.setThumbnail(member.user.displayAvatarURL({ dynamic: true, size: 256 }));
+            
+            // Добавляем логотип сервера (если есть)
+            if (member.guild.iconURL()) {
+                welcomeEmbed.setAuthor({ 
+                    name: 'FOREVER FAMILY', 
+                    iconURL: member.guild.iconURL({ dynamic: true }) 
+                });
+            }
+            
             await welcomeChannel.send({ embeds: [welcomeEmbed] });
         }
         
@@ -310,9 +322,10 @@ client.on('interactionCreate', async (interaction) => {
                 `**┃ Возраст:**\n\`${age}\`\n\n` +
                 `**┃ Готовность к обзвону:**\n\`${call}\`\n\n` +
                 `\`\`\`\n───────────────────────\n\`\`\`\n` +
-                `**Подал:** ${interaction.user.tag}\n` +
+                `**Подал:** <@${interaction.user.id}> (${interaction.user.tag})\n` +
                 `**ID:** \`${interaction.user.id}\`\n` +
-                `**Дата:** <t:${Math.floor(Date.now() / 1000)}:F>`,
+                `**Дата:** <t:${Math.floor(Date.now() / 1000)}:F>\n\n` +
+                `**Статус:** 🟡 \`ОЖИДАЕТ РАССМОТРЕНИЯ\``,
                 'Forever Family'
             );
             
@@ -337,7 +350,16 @@ client.on('interactionCreate', async (interaction) => {
             
             const reviewChannel = interaction.guild.channels.cache.get(CONFIG.REVIEW_CHANNEL_ID);
             if (reviewChannel) {
-                await reviewChannel.send({ embeds: [applicationEmbed], components: [buttons] });
+                // Получаем роли для упоминания
+                const founderRole = `<@&${CONFIG.FOUNDER_ROLE_ID}>`;
+                const depLeaderRole = `<@&${CONFIG.DEP_LEADER_ROLE_ID}>`;
+                const assistantRole = `<@&${CONFIG.ASSISTANT_ROLE_ID}>`;
+                
+                await reviewChannel.send({ 
+                    content: `${founderRole} ${depLeaderRole} ${assistantRole}\n\`\`\`\n📋 НОВАЯ ЗАЯВКА ОТ ${interaction.user.tag}\n\`\`\``,
+                    embeds: [applicationEmbed], 
+                    components: [buttons] 
+                });
             }
             
             await interaction.reply({ 
@@ -421,16 +443,46 @@ client.on('interactionCreate', async (interaction) => {
         }
         
         if (action === 'review') {
-            const reviewEmbed = createStrictEmbed(
-                '👁️ ЗАЯВКА В ПРОЦЕССЕ РАССМОТРЕНИЯ',
-                `\`\`\`\n` +
-                `Рассматривает: ${interaction.user.tag}\n` +
-                `Время: ${new Date().toLocaleString('ru-RU')}\n` +
-                `\`\`\``,
-                'Forever Family'
-            );
+            // Получаем оригинальный embed
+            const originalEmbed = EmbedBuilder.from(interaction.message.embeds[0]);
             
-            await interaction.update({ embeds: [interaction.message.embeds[0], reviewEmbed], components: [] });
+            // Обновляем статус в описании
+            const description = originalEmbed.data.description.replace(
+                /\*\*Статус:\*\* .+$/m,
+                `**Статус:** 🔵 \`В ПРОЦЕССЕ РАССМОТРЕНИЯ\`\n\n` +
+                `**┃ Рассматривает:** <@${interaction.user.id}>\n` +
+                `**┃ Время:** <t:${Math.floor(Date.now() / 1000)}:F>`
+            );
+            originalEmbed.setDescription(description);
+            
+            // Отключаем все кнопки
+            const disabledButtons = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`review_${userId}`)
+                        .setLabel('Рассмотреть')
+                        .setStyle(ButtonStyle.Primary)
+                        .setEmoji('👁️')
+                        .setDisabled(true),
+                    new ButtonBuilder()
+                        .setCustomId(`accept_${userId}`)
+                        .setLabel('Принять')
+                        .setStyle(ButtonStyle.Success)
+                        .setEmoji('✅')
+                        .setDisabled(true),
+                    new ButtonBuilder()
+                        .setCustomId(`reject_${userId}`)
+                        .setLabel('Отклонить')
+                        .setStyle(ButtonStyle.Danger)
+                        .setEmoji('❌')
+                        .setDisabled(true)
+                );
+            
+            await interaction.update({ 
+                content: `\`\`\`\n🔵 ЗАЯВКА НА РАССМОТРЕНИИ У ${interaction.user.tag}\n\`\`\``,
+                embeds: [originalEmbed], 
+                components: [disabledButtons] 
+            });
             
             await sendLog(
                 client,
@@ -443,17 +495,24 @@ client.on('interactionCreate', async (interaction) => {
         }
         
         if (action === 'accept') {
-            const acceptEmbed = createStrictEmbed(
-                '✅ ЗАЯВКА ПРИНЯТА',
-                `\`\`\`\n` +
-                `Принял: ${interaction.user.tag}\n` +
-                `Время: ${new Date().toLocaleString('ru-RU')}\n` +
-                `\`\`\`\n\n` +
-                `**Кандидат успешно принят в семью Forever!**`,
-                'Forever Family'
-            );
+            // Получаем оригинальный embed
+            const originalEmbed = EmbedBuilder.from(interaction.message.embeds[0]);
             
-            await interaction.update({ embeds: [interaction.message.embeds[0], acceptEmbed], components: [] });
+            // Обновляем статус в описании
+            const description = originalEmbed.data.description.replace(
+                /\*\*Статус:\*\* .+$/m,
+                `**Статус:** 🟢 \`ПРИНЯТА\`\n\n` +
+                `**┃ Принял:** <@${interaction.user.id}>\n` +
+                `**┃ Время:** <t:${Math.floor(Date.now() / 1000)}:F>`
+            );
+            originalEmbed.setDescription(description);
+            originalEmbed.setColor('#00FF00'); // Зеленый цвет
+            
+            await interaction.update({ 
+                content: `\`\`\`\n✅ ЗАЯВКА ПРИНЯТА | Принял: ${interaction.user.tag}\n\`\`\``,
+                embeds: [originalEmbed], 
+                components: [] 
+            });
             
             const user = await client.users.fetch(userId);
             if (user) {
@@ -465,6 +524,7 @@ client.on('interactionCreate', async (interaction) => {
                     `└─────────────────────────┘\n` +
                     `\`\`\`\n\n` +
                     `Ваша заявка в семью Forever была **ПРИНЯТА**!\n\n` +
+                    `**Принял:** ${interaction.user.tag}\n\n` +
                     `Добро пожаловать в нашу семью!`,
                     'Forever Family'
                 );
@@ -509,17 +569,25 @@ client.on('interactionCreate', async (interaction) => {
         const userId = interaction.customId.split('_')[1];
         const reason = interaction.fields.getTextInputValue('reason');
         
-        const rejectEmbed = createStrictEmbed(
-            '❌ ЗАЯВКА ОТКЛОНЕНА',
-            `\`\`\`\n` +
-            `Отклонил: ${interaction.user.tag}\n` +
-            `Время: ${new Date().toLocaleString('ru-RU')}\n` +
-            `\`\`\`\n\n` +
-            `**Причина отказа:**\n\`\`\`\n${reason}\n\`\`\``,
-            'Forever Family'
-        );
+        // Получаем оригинальный embed
+        const originalEmbed = EmbedBuilder.from(interaction.message.embeds[0]);
         
-        await interaction.update({ embeds: [interaction.message.embeds[0], rejectEmbed], components: [] });
+        // Обновляем статус в описании
+        const description = originalEmbed.data.description.replace(
+            /\*\*Статус:\*\* .+$/m,
+            `**Статус:** 🔴 \`ОТКЛОНЕНА\`\n\n` +
+            `**┃ Отклонил:** <@${interaction.user.id}>\n` +
+            `**┃ Время:** <t:${Math.floor(Date.now() / 1000)}:F>\n` +
+            `**┃ Причина:**\n\`\`\`\n${reason}\n\`\`\``
+        );
+        originalEmbed.setDescription(description);
+        originalEmbed.setColor('#FF0000'); // Красный цвет
+        
+        await interaction.update({ 
+            content: `\`\`\`\n❌ ЗАЯВКА ОТКЛОНЕНА | Отклонил: ${interaction.user.tag}\n\`\`\``,
+            embeds: [originalEmbed], 
+            components: [] 
+        });
         
         const user = await client.users.fetch(userId);
         if (user) {
@@ -531,6 +599,7 @@ client.on('interactionCreate', async (interaction) => {
                 `└─────────────────────────┘\n` +
                 `\`\`\`\n\n` +
                 `Ваша заявка в семью Forever была **ОТКЛОНЕНА**.\n\n` +
+                `**Отклонил:** ${interaction.user.tag}\n\n` +
                 `**Причина:**\n\`\`\`\n${reason}\n\`\`\``,
                 'Forever Family'
             );
