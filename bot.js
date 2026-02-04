@@ -265,7 +265,6 @@ client.on('interactionCreate', async (interaction) => {
                         .setCustomId('open_application')
                         .setLabel('📝 ПОДАТЬ ЗАЯВКУ')
                         .setStyle(ButtonStyle.Secondary)
-                        .setEmoji('')
                 );
             
             await interaction.channel.send({ 
