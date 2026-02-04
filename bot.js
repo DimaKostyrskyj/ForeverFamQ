@@ -245,7 +245,7 @@ client.on('interactionCreate', async (interaction) => {
                 '📋 ПОДАЧА ЗАЯВКИ В СЕМЬЮ',
                 `\`\`\`\n` +
                 `┌─────────────────────────┐\n` +
-                `│  FOREVER FAMILY         │\n` +
+                `│  Forever Federation     │\n` +
                 `└─────────────────────────┘\n` +
                 `\`\`\`\n\n` +
                 `**Добро пожаловать в систему подачи заявок!**\n\n` +
@@ -265,7 +265,7 @@ client.on('interactionCreate', async (interaction) => {
                         .setCustomId('open_application')
                         .setLabel('📝 ПОДАТЬ ЗАЯВКУ')
                         .setStyle(ButtonStyle.Secondary)
-                        .setEmoji('📋')
+                        .setEmoji('')
                 );
             
             await interaction.channel.send({ 
