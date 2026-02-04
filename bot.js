@@ -231,6 +231,62 @@ client.on('interactionCreate', async (interaction) => {
             
             await interaction.showModal(modal);
         }
+        
+        // Команда /setup_application_button
+        if (commandName === 'setup_application_button') {
+            if (!hasPermission(interaction.member)) {
+                return interaction.reply({ 
+                    content: '```\n❌ ДОСТУП ЗАПРЕЩЕН\nТребуется роль: Основатель\n```', 
+                    ephemeral: true 
+                });
+            }
+            
+            const applicationEmbed = createStrictEmbed(
+                '📋 ПОДАЧА ЗАЯВКИ В СЕМЬЮ',
+                `\`\`\`\n` +
+                `┌─────────────────────────┐\n` +
+                `│  FOREVER FAMILY         │\n` +
+                `└─────────────────────────┘\n` +
+                `\`\`\`\n\n` +
+                `**Добро пожаловать в систему подачи заявок!**\n\n` +
+                `Нажмите кнопку ниже, чтобы подать заявку на вступление в семью Forever.\n\n` +
+                `\`\`\`\nВАЖНО:\n\`\`\`\n` +
+                `▫️ Заполняйте все поля честно\n` +
+                `▫️ Указывайте реальную информацию\n` +
+                `▫️ Будьте готовы к обзвону\n` +
+                `▫️ Рассмотрение может занять время\n\n` +
+                `\`\`\`\nУдачи!\n\`\`\``,
+                'Forever Family'
+            );
+            
+            const applicationButton = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('open_application')
+                        .setLabel('📝 ПОДАТЬ ЗАЯВКУ')
+                        .setStyle(ButtonStyle.Secondary)
+                        .setEmoji('📋')
+                );
+            
+            await interaction.channel.send({ 
+                embeds: [applicationEmbed], 
+                components: [applicationButton] 
+            });
+            
+            await interaction.reply({ 
+                content: '```\n✅ Кнопка подачи заявки создана!\n```', 
+                ephemeral: true 
+            });
+            
+            await sendLog(
+                client,
+                'КНОПКА ЗАЯВКИ СОЗДАНА',
+                `\`\`\`\n` +
+                `Создал: ${interaction.user.tag}\n` +
+                `Канал: #${interaction.channel.name}\n` +
+                `\`\`\``
+            );
+        }
     }
     
     // Обработка модального окна
@@ -305,6 +361,58 @@ client.on('interactionCreate', async (interaction) => {
     // Обработка кнопок
     if (interaction.isButton()) {
         const [action, userId] = interaction.customId.split('_');
+        
+        // Обработка кнопки "Подать заявку"
+        if (interaction.customId === 'open_application') {
+            const modal = new ModalBuilder()
+                .setCustomId('applicationModal')
+                .setTitle('━━━ ЗАЯВКА В FOREVER ━━━');
+            
+            const nameInput = new TextInputBuilder()
+                .setCustomId('name')
+                .setLabel('Имя Фамилия')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Введите ваше имя и фамилию')
+                .setRequired(true);
+            
+            const experienceInput = new TextInputBuilder()
+                .setCustomId('experience')
+                .setLabel('Сколько лет играете?')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Например: 2 года')
+                .setRequired(true);
+            
+            const positionsInput = new TextInputBuilder()
+                .setCustomId('positions')
+                .setLabel('Ваши должности')
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder('Перечислите ваши должности')
+                .setRequired(true);
+            
+            const ageInput = new TextInputBuilder()
+                .setCustomId('age')
+                .setLabel('Сколько вам лет?')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Введите ваш возраст')
+                .setRequired(true);
+            
+            const callInput = new TextInputBuilder()
+                .setCustomId('call')
+                .setLabel('Готовы пройти обзвон для вступления?')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Да/Нет')
+                .setRequired(true);
+            
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(nameInput),
+                new ActionRowBuilder().addComponents(experienceInput),
+                new ActionRowBuilder().addComponents(positionsInput),
+                new ActionRowBuilder().addComponents(ageInput),
+                new ActionRowBuilder().addComponents(callInput)
+            );
+            
+            return await interaction.showModal(modal);
+        }
         
         if (!hasReviewPermission(interaction.member)) {
             return interaction.reply({ 
@@ -475,6 +583,10 @@ client.on('ready', async () => {
         {
             name: 'application',
             description: '📋 Подать заявку в семью Forever'
+        },
+        {
+            name: 'setup_application_button',
+            description: '🔧 Создать фиксированную кнопку для подачи заявок (только для основателей)'
         }
     ];
     
