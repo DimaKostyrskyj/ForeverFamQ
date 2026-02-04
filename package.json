@@ -1,0 +1,19 @@
+{
+  "name": "forever-family-bot",
+  "version": "1.0.0",
+  "description": "Строгий бот для семьи Forever в Discord",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "keywords": ["discord", "bot", "forever"],
+  "author": "Forever Team",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.3.1"
+  },
+  "engines": {
+    "node": ">=16.9.0"
+  }
+}
